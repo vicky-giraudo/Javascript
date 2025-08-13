@@ -1,17 +1,86 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PARASOLES|cotizador</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cotizador de Parasoles - Entregable 2</title>
+<link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <h1>Aqui se creara el cotizador de parasoles de la empresa ANODAL</h1>
-    <p>
-Este simulador permite cotizar parasoles de la empresa ANODAL en base
-a las dimensiones del vano, la cantidad de hojas y la dirección de
-los parantes, optimizando la seguridad y el performance del producto.
-</p>
-    <script src="main.js"></script>
+<main class="container">
+    <header>
+    <h1>Cotizador de Parasoles</h1>
+    <p class="sub">Completa el formulario para generar la cotización. Los datos se guardan en localStorage.</p>
+    </header>
+
+    <section class="form-card">
+    <form id="cotizadorForm" novalidate>
+        <fieldset>
+        <legend>Datos del proyecto</legend>
+
+        <label for="proyecto">Nombre del proyecto</label>
+        <input id="proyecto" name="proyecto" type="text" required />
+
+        <div class="row">
+            <div class="col">
+            <label for="ancho">Ancho del vano (m)</label>
+            <input id="ancho" name="ancho" type="number" step="0.01" min="0.01" required />
+            </div>
+            <div class="col">
+            <label for="alto">Alto del vano (m) (máx 5m)</label>
+            <input id="alto" name="alto" type="number" step="0.01" min="0.01" max="5" required />
+            </div>
+        </div>
+
+        <label>Cómo indicar la cantidad de hojas</label>
+        <div class="radio-row">
+            <label><input type="radio" name="modoHojas" value="elige" checked /> Yo elijo</label>
+            <label><input type="radio" name="modoHojas" value="recomienda" /> Recomiéndame</label>
+        </div>
+
+        <div id="eligeHojasBlock">
+            <label for="hojas">Cantidad de hojas</label>
+            <input id="hojas" name="hojas" type="number" min="1" step="1" />
+        </div>
+
+        <label>Dirección de parantes</label>
+        <div class="radio-row">
+            <label><input type="radio" name="direccion" value="Verticales" checked /> Verticales</label>
+            <label><input type="radio" name="direccion" value="Horizontales" /> Horizontales</label>
+        </div>
+
+        <div class="actions">
+            <button type="submit" id="calcularBtn">Calcular resumen</button>
+            <button type="reset" id="limpiarBtn" class="secondary">Limpiar</button>
+        </div>
+
+        <div id="errorBox" role="alert" class="hidden"></div>
+        </fieldset>
+    </form>
+    </section>
+
+    <section class="result-card hidden" id="resumenCard" aria-live="polite">
+    <h2>Resumen del proyecto</h2>
+    <pre id="resumenText"></pre>
+    <div class="actions">
+        <button id="enviarBtn">Enviar a cotización (guardar)</button>
+        <button id="editarBtn" class="secondary">Volver a editar</button>
+    </div>
+    </section>
+
+    <section class="storage-card">
+    <h2>Cotizaciones guardadas</h2>
+    <ul id="listaCotizaciones"></ul>
+    <div class="actions">
+        <button id="vaciarStorage" class="danger">Eliminar todas las cotizaciones</button>
+    </div>
+    </section>
+
+    <footer>
+    <p>Entrega N°2 — Cotizador de Parasoles</p>
+    </footer>
+</main>
+
+<script src="js/main.js"></script>
 </body>
 </html>

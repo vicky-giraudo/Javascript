@@ -1,0 +1,49 @@
+/*CSS BASICO-MEJORAR PARA ENTREGA FINAL*/
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#222; background:#f7f8fb; }
+
+.container { max-width:980px; margin:24px auto; padding:16px; }
+
+header { text-align:center; margin-bottom:18px; }
+h1 { margin:0; font-size:1.6rem; }
+.sub { color:#555; margin-top:6px; }
+
+.form-card, .result-card, .storage-card { background:white; padding:16px; border-radius:12px; box-shadow: 0 6px 18px rgba(20,20,50,0.04); margin-bottom:16px; }
+
+fieldset { border:none; padding:0; margin:0; }
+
+label { display:block; margin-top:8px; font-size:0.95rem; }
+input[type="text"], input[type="number"], textarea { width:100%; padding:8px 10px; margin-top:6px; border:1px solid #ddd; border-radius:8px; }
+
+.row { display:flex; gap:12px; margin-top:8px; }
+.col { flex:1; }
+
+.radio-row { display:flex; gap:12px; margin-top:8px; align-items:center; }
+
+.actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+button { background:#0b76ef; color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; }
+button.secondary { background:#f0f0f3; color:#222; border:1px solid #ddd; }
+button.danger { background:#ef3b3b; }
+
+.hidden { display:none; }
+
+pre { background:#f4f6fb; padding:12px; border-radius:8px; overflow:auto; white-space:pre-wrap; }
+
+#listaCotizaciones { list-style:none; padding:0; margin:0; }
+#listaCotizaciones li { border-bottom:1px dashed #eee; padding:8px 0; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+#listaCotizaciones li button { padding:6px 8px; font-size:0.85rem; border-radius:8px; }
+
+/* Mensajes de error */
+#errorBox { margin-top:10px; padding:8px 10px; background:#fff3f0; border:1px solid #f5c2b3; color:#7a2318; border-radius:8px; }
+
+/* Responsive sm */
+@media (max-width:640px) {
+.row { flex-direction:column; }
+.container { padding:12px; }
+}
+
+/* Responsive md */
+@media (min-width:641px) and (max-width:960px) {
+.container { max-width:760px; }
+}
+
