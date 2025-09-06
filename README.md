@@ -19,9 +19,3 @@
 4. Abrir el historial desde el menú hamburguesa (arriba a la derecha).
 5. Filtrar, ordenar o eliminar cotizaciones desde el historial.
 
----
-
-## 📌 Notas
-- No requiere instalación de NodeJS ni NPM.
-- Los datos se guardan en `localStorage`.
-- El proyecto cumple con los requisitos de la consigna final de JavaScript Flex.
