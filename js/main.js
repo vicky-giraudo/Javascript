@@ -1,269 +1,230 @@
-//JAVA SCRIPT DEL COTIZADOR DE PARA SOLES
-const KEY_STORAGE = 'cotizacionesParasoles';
+/* ---------- js/main.js ---------- */
 
-
-const $ = (sel) => document.querySelector(sel);
+// helpers de selección
+const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-/* ---------- DOM ---------- */
-const form = $('#cotizadorForm');
-const modoHojasRadios = $$('input[name="modoHojas"]');
-const eligeHojasBlock = $('#eligeHojasBlock');
-const hojasInput = $('#hojas');
-const errorBox = $('#errorBox');
+const proyectoInput     = $('#proyecto');
+const anchoInput        = $('#ancho');
+const altoInput         = $('#alto');
+const hojasInput        = $('#hojas');
+const modoHojasRadios   = $$('input[name="modoHojas"]');
+const direccionRadios   = $$('input[name="direccionParantes"]');
 
-const resumenCard = $('#resumenCard');
-const resumenText = $('#resumenText');
-const enviarBtn = $('#enviarBtn');
-const editarBtn = $('#editarBtn');
+const resumenCard       = $('#resumenCotizacion');
+const enviarBtn         = $('#guardarCotizacionBtn');
 
-const listaCotizaciones = $('#listaCotizaciones');
-const vaciarStorageBtn = $('#vaciarStorage');
+const step1 = $('#collapseStep1');
+const step2 = $('#collapseStep2');
+const step3 = $('#collapseStep3');
+const step4 = $('#collapseFour');
 
+const pasos = [
+{ btn: $('#nextStep1'), collapse: step1, inputs: ['proyecto'] },
+{ btn: $('#nextStep2'), collapse: step2, inputs: ['ancho', 'alto'] },
+{ btn: $('#nextStep3'), collapse: step3, inputs: ['hojas', 'modoHojas'] },
+{ btn: null,          collapse: step4, inputs: ['direccionParantes'] },
+];
+
+/* ---------- SweetAlert helpers ---------- */
+async function confirmAction(msg) {
+const res = await Swal.fire({
+    title: msg,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33'
+});
+return res.isConfirmed;
+}
 function mostrarError(msg) {
-if (errorBox) {
-    errorBox.textContent = msg;
-    errorBox.classList.remove('hidden');
-} else {
-    console.error('errorBox no encontrado:', msg);
+Swal.fire({ icon: 'error', title: 'Error', text: msg });
 }
+function alertSuccess(msg) {
+Swal.fire({ icon: 'success', title: '¡Éxito!', text: msg, timer: 2200, showConfirmButton: false });
 }
-function ocultarError() {
-if (errorBox) {
-    errorBox.classList.add('hidden');
-    errorBox.textContent = '';
-}
-}
+window.confirmAction = confirmAction;
 
+async function abrirPopupResumen(obj) {
+const html = `
+    <div style="text-align:left">
+    <p><strong>Proyecto:</strong> ${obj.proyecto}</p>
+    <p><strong>Ancho del vano:</strong> ${obj.ancho} m</p>
+    <p><strong>Alto del vano:</strong> ${obj.alto} m</p>
+    <p><strong>Hojas:</strong> ${obj.hojas}</p>
+    <p><strong>Ancho por hoja:</strong> ${obj.anchoHoja.toFixed(2)} m</p>
+    <p><strong>Dirección parantes:</strong> ${obj.direccion}</p>
+    </div>
+`;
+return Swal.fire({
+    title: 'Resumen de tu proyecto',
+    html,
+    icon: 'info',
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: 'Guardar cotización',
+    denyButtonText: 'Editar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#3085d6',
+    denyButtonColor: '#6c757d',
+    cancelButtonColor: '#d33'
+});
+}
+window.abrirPopupResumen = abrirPopupResumen;
+
+/* ---------- Lógica de hojas ---------- */
 function actualizarModoHojas() {
-const sel = document.querySelector('input[name="modoHojas"]:checked');
+const sel  = document.querySelector('input[name="modoHojas"]:checked');
 const modo = sel ? sel.value : 'elige';
+const block = $('#eligeHojasBlock');
+if (!block) return;
 if (modo === 'elige') {
-    if (eligeHojasBlock) eligeHojasBlock.style.display = '';
+    block.style.display = '';
 } else {
-    if (eligeHojasBlock) eligeHojasBlock.style.display = 'none';
+    block.style.display = 'none';
     if (hojasInput) hojasInput.value = '';
 }
 }
-if (modoHojasRadios.length) modoHojasRadios.forEach(r => r.addEventListener('change', actualizarModoHojas));
-document.addEventListener('DOMContentLoaded', actualizarModoHojas);
+modoHojasRadios.forEach(r => r.addEventListener('change', actualizarModoHojas));
 
-function obtenerMedidas() {
-const ancho = parseFloat($('#ancho').value);
-const alto = parseFloat($('#alto').value);
-if (isNaN(ancho) || ancho <= 0) throw new Error('El ancho debe ser un número mayor que 0.');
-if (isNaN(alto) || alto <= 0) throw new Error('El alto debe ser un número mayor que 0.');
-if (alto > 5) throw new Error('Debes colocar un alto menor o igual a 5m por seguridad y performance.');
-return { ancho, alto };
-}
-
-// Cantidad de hojas
-function calcularCantidadHojas(ancho) {
-const sel = document.querySelector('input[name="modoHojas"]:checked');
-const modo = sel ? sel.value : 'recomienda';
-if (modo === 'elige') {
-    const hojas = parseInt(hojasInput.value);
-    if (isNaN(hojas) || hojas < 1) throw new Error('Ingresa una cantidad válida de hojas (mínimo 1).');
-    const anchoHoja = ancho / hojas;
-    if (anchoHoja < 1) throw new Error(`Con ${hojas} hojas, cada una mide ${anchoHoja.toFixed(2)}m (<1m).`);
-    if (anchoHoja > 3) throw new Error(`Con ${hojas} hojas, cada una mide ${anchoHoja.toFixed(2)}m (>3m).`);
-    return { hojas, anchoHoja };
-} else {
-
-    let hojasRec = ancho - (ancho % 1);
-    if (hojasRec < 1) hojasRec = 1;
-    let anchoHojaRec = ancho / hojasRec;
-    while (anchoHojaRec > 3) {
-    hojasRec = hojasRec + 1;
-    anchoHojaRec = ancho / hojasRec;
+/* ---------- Validaciones ---------- */
+function validarPaso(stepIndex) {
+try {
+    if (stepIndex === 0) {
+    if (!proyectoInput.value.trim()) throw new Error('Debes ingresar un nombre de proyecto.');
     }
-    return { hojas: hojasRec, anchoHoja: anchoHojaRec };
+    if (stepIndex === 1) {
+    const ancho = parseFloat(anchoInput.value);
+    const alto  = parseFloat(altoInput.value);
+    if (isNaN(ancho) || ancho <= 0) throw new Error('El ancho debe ser mayor que 0.');
+    if (isNaN(alto)  || alto  <= 0) throw new Error('El alto debe ser mayor que 0.');
+    if (alto > 5) throw new Error('El alto no puede ser mayor a 5 m.');
+    }
+    if (stepIndex === 2) {
+    const modo = document.querySelector('input[name="modoHojas"]:checked')?.value || 'recomienda';
+    if (modo === 'elige') {
+        const hojas = parseInt(hojasInput.value, 10);
+        if (isNaN(hojas) || hojas < 1) throw new Error('Ingresa una cantidad válida de hojas (entero ≥ 1).');
+    }
+    }
+    return true;
+} catch (e) {
+    mostrarError(e.message);
+    return false;
 }
 }
 
+/* ---------- Cálculos y resumen ---------- */
+function calcularCantidadHojas(ancho) {
+const modo = document.querySelector('input[name="modoHojas"]:checked')?.value || 'recomienda';
+if (modo === 'elige') {
+    const hojas = parseInt(hojasInput.value, 10);
+    const anchoHoja = hojas > 0 ? (ancho / hojas) : ancho;
+    return { hojas, anchoHoja };
+}
+let hojas = Math.floor(ancho);
+if (hojas < 1) hojas = 1;
+let anchoHoja = ancho / hojas;
+while (anchoHoja > 3) {
+    hojas++;
+    anchoHoja = ancho / hojas;
+}
+return { hojas, anchoHoja };
+}
 function obtenerDireccion() {
-const sel = document.querySelector('input[name="direccion"]:checked');
+const sel = document.querySelector('input[name="direccionParantes"]:checked');
 return sel ? sel.value : 'Verticales';
 }
-
-/* ---------- Storage ---------- */
-function leerStorage() {
-try {
-    const raw = localStorage.getItem(KEY_STORAGE);
-    if (!raw) return [];
-    return JSON.parse(raw);
-} catch (e) {
-    console.warn('Error leyendo localStorage:', e);
-    return [];
-}
-}
-
-function guardarEnStorage(obj) {
-const arr = leerStorage();
-arr.push(obj);
-localStorage.setItem(KEY_STORAGE, JSON.stringify(arr));
-}
-
-function renderLista() {
-
-if (!listaCotizaciones) {
-    console.warn('renderLista: #listaCotizaciones no existe en el DOM. Abortando render.');
-    return;
-}
-
-const arr = leerStorage();
-listaCotizaciones.innerHTML = '';
-if (arr.length === 0) {
-    listaCotizaciones.innerHTML = '<li>No hay cotizaciones guardadas.</li>';
-    return;
-}
-arr.forEach((c, idx) => {
-    const li = document.createElement('li');
-    li.innerHTML = `
-    <div>
-        <strong>${c.proyecto}</strong> — ${c.ancho}m x ${c.alto}m — ${c.hojas} hojas (${c.anchoHoja.toFixed(2)}m)
-        <div style="font-size:.85rem;color:#666;">${new Date(c.fecha).toLocaleString()}</div>
-    </div>
-    <div>
-        <button data-idx="${idx}" class="btn-ver">Ver</button>
-        <button data-idx="${idx}" class="btn-borrar secondary">Borrar</button>
-    </div>
-    `;
-    listaCotizaciones.appendChild(li);
-});
-
-$$('.btn-ver').forEach(b => {
-    b.addEventListener('click', (ev) => {
-    const idx = Number(ev.currentTarget.dataset.idx);
-    const arr = leerStorage();
-    const c = arr[idx];
-    if (c) {
-        mostrarResumenEnPantalla(c, {guardarDisabled:true});
-    }
-    });
-});
-$$('.btn-borrar').forEach(b => {
-    b.addEventListener('click', (ev) => {
-    const idx = Number(ev.currentTarget.dataset.idx);
-    const arr = leerStorage();
-    arr.splice(idx,1);
-    localStorage.setItem(KEY_STORAGE, JSON.stringify(arr));
-    renderLista();
-    });
-});
-}
-
-/* ---------- Mostrar resumen ---------- */
-function construirResumenObjeto({ proyecto, medidas, reparto, direccion }) {
+function construirResumenObjeto() {
+const medidas = { ancho: parseFloat(anchoInput.value), alto: parseFloat(altoInput.value) };
+const reparto = calcularCantidadHojas(medidas.ancho);
 return {
     id: Date.now(),
-    proyecto,
+    proyecto: proyectoInput.value.trim(),
     ancho: medidas.ancho,
     alto: medidas.alto,
     hojas: reparto.hojas,
     anchoHoja: reparto.anchoHoja,
-    direccion,
+    direccion: obtenerDireccion(),
     fecha: new Date().toISOString()
 };
 }
-
-function mostrarResumenEnPantalla(obj, opts = {}) {
-
-if (resumenText) {
-    resumenText.textContent = [
-    `Proyecto: ${obj.proyecto}`,
-    `Ancho del vano: ${obj.ancho} m`,
-    `Alto del vano: ${obj.alto} m`,
-    `Hojas: ${obj.hojas}`,
-    `Ancho por hoja: ${obj.anchoHoja.toFixed(2)} m`,
-    `Dirección parantes: ${obj.direccion}`,
-    ].join('\n');
-}
-if (resumenCard) resumenCard.classList.remove('hidden');
-
-if (enviarBtn) {
-    enviarBtn.disabled = !!opts.guardarDisabled;
-    enviarBtn.dataset.obj = JSON.stringify(obj);
-}
+function mostrarResumenEnPantalla(obj) {
+if (!enviarBtn) return;
+enviarBtn.dataset.obj = JSON.stringify(obj);
+if (resumenCard) resumenCard.classList.add('d-none');
 }
 
-/* ---------- FORMULARIO ---------- */
-if (form) {
-form.addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    ocultarError();
-    if (resumenCard) resumenCard.classList.add('hidden');
+function resetFormulario() {
+proyectoInput.value = '';
+anchoInput.value = '';
+altoInput.value = '';
+hojasInput.value = '';
 
-    try {
-    const proyecto = $('#proyecto').value.trim();
-    if (!proyecto) throw new Error('Debes ingresar un nombre de proyecto.');
-    const medidas = obtenerMedidas();
-    const reparto = calcularCantidadHojas(medidas.ancho);
-    const direccion = obtenerDireccion();
+const elige = $('#modoElige');
+const recomienda = $('#modoRecomienda');
+if (elige) elige.checked = true;
+if (recomienda) recomienda.checked = false;
+actualizarModoHojas();
 
-    const proyectoObj = construirResumenObjeto({ proyecto, medidas, reparto, direccion });
-    mostrarResumenEnPantalla(proyectoObj);
-    } catch (err) {
-    mostrarError(err.message || 'Error en la validación.');
+const dirVert = $$('input[name="direccionParantes"]').find(r => r.value === 'Verticales');
+if (dirVert) dirVert.checked = true;
+
+if (resumenCard) resumenCard.classList.add('d-none');
+
+if (step1) bootstrap.Collapse.getOrCreateInstance(step1, { toggle: false }).show();
+if (step2) bootstrap.Collapse.getOrCreateInstance(step2, { toggle: false }).hide();
+if (step3) bootstrap.Collapse.getOrCreateInstance(step3, { toggle: false }).hide();
+if (step4) bootstrap.Collapse.getOrCreateInstance(step4, { toggle: false }).hide();
+}
+
+pasos.forEach((p, i) => {
+if (!p.btn) return;
+p.btn.addEventListener('click', () => {
+    if (!validarPaso(i)) return;
+    const col = bootstrap.Collapse.getOrCreateInstance(p.collapse, { toggle: false });
+    col.hide();
+    const next = pasos[i + 1];
+    if (next) bootstrap.Collapse.getOrCreateInstance(next.collapse, { toggle: false }).show();
+    if (next && next.collapse === document.getElementById('collapseFour')) {
+    const resumen = construirResumenObjeto();
+    mostrarResumenEnPantalla(resumen);
     }
 });
-}
+});
 
-/* ---------- Botones del resumen ---------- */
-if (enviarBtn) {
-enviarBtn.addEventListener('click', () => {
-    try {
+direccionRadios.forEach(r => {
+r.addEventListener('change', () => {
     const raw = enviarBtn.dataset.obj;
-    if (!raw) throw new Error('No hay un proyecto válido para guardar.');
+    if (raw) {
     const obj = JSON.parse(raw);
-    guardarEnStorage(obj);
-    renderLista();
-    if (resumenCard) resumenCard.classList.add('hidden');
-    if (form) form.reset();
-    actualizarModoHojas();
-    alertSuccess('¡Gracias! Tu proyecto ha sido guardado en cotizaciones.');
-    } catch (e) {
-    mostrarError(e.message || 'Error al guardar.');
+    obj.direccion = obtenerDireccion();
+    mostrarResumenEnPantalla(obj);
+    enviarBtn.dataset.obj = JSON.stringify(obj);
     }
 });
-}
-
-if (editarBtn) {
-editarBtn.addEventListener('click', () => {
-    if (resumenCard) resumenCard.classList.add('hidden');
-});
-}
-
-/* ---------- Vaciar storage ---------- */
-if (vaciarStorageBtn) {
-vaciarStorageBtn.addEventListener('click', () => {
-    if (!confirm('¿Eliminar todas las cotizaciones guardadas?')) return;
-    localStorage.removeItem(KEY_STORAGE);
-    renderLista();
-});
-}
-
-function alertSuccess(msg) {
-
-if (errorBox) {
-    errorBox.textContent = msg;
-    errorBox.style.background = '#ecf9f1';
-    errorBox.style.border = '1px solid #bdeacb';
-    errorBox.style.color = '#0b7a3a';
-    errorBox.classList.remove('hidden');
-    setTimeout(() => {
-    ocultarError();
-
-    errorBox.style.background = '';
-    errorBox.style.border = '';
-    errorBox.style.color = '';
-    }, 2200);
-} else {
-    console.log(msg);
-}
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-renderLista();
 });
 
+enviarBtn?.addEventListener('click', async () => {
+try {
+    const obj = construirResumenObjeto();
+    mostrarResumenEnPantalla(obj);
+    const res = await abrirPopupResumen(obj);
+    if (res.isDenied) return;     
+    if (!res.isConfirmed) return; 
+    guardarEnStorage(obj);       
+    renderLista();                
+    resetFormulario();
+    alertSuccess('¡Gracias! Tu proyecto fue guardado en el historial.');
+} catch (e) {
+    mostrarError(e.message);
+}
+});
+/* ---------- Inicio ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+await cargarSemillaHistorial(); 
+renderLista();                 
+actualizarModoHojas();
+});
